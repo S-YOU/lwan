@@ -1747,3 +1747,28 @@ __attribute__((used)) int fuzz_parse_http_request(const uint8_t *data,
     return 0;
 }
 #endif
+
+static inline void
+async_await_fd(struct coro *coro, int fd, enum lwan_connection_coro_yield events)
+{
+    assert(events >= CONN_CORO_ASYNC_AWAIT_READ &&
+           events <= CONN_CORO_ASYNC_AWAIT_READ_WRITE);
+
+    coro_yield(coro, (int)((uint64_t)fd << 32 | events));
+    return (void)coro_yield(coro, CONN_CORO_RESUME);
+}
+
+void lwan_request_await_read(struct lwan_request *r, int fd)
+{
+    return async_await_fd(r->conn->coro, fd, CONN_CORO_ASYNC_AWAIT_READ);
+}
+
+void lwan_request_await_write(struct lwan_request *r, int fd)
+{
+    return async_await_fd(r->conn->coro, fd, CONN_CORO_ASYNC_AWAIT_WRITE);
+}
+
+void lwan_request_await_read_write(struct lwan_request *r, int fd)
+{
+    return async_await_fd(r->conn->coro, fd, CONN_CORO_ASYNC_AWAIT_READ_WRITE);
+}
